@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDL LIVE I แพลตฟอร์มสตรีมมิ่งไลฟ์สดสำหรับงานอีเว้นต์ Roblox</title>
+
+  <!-- Google Fonts: Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at center, #2e1514 0%, #170e0e 50%, #0a0808 100%);
+      --card-bg: rgba(26, 20, 20, 0.75);
+      --text-color: #ffffff;
+      --text-sub: #a0a0a0;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(0, 0, 0, 0.4);
+      --chat-bg: rgba(18, 14, 14, 0.85);
+      --chat-msg-bg: rgba(255, 255, 255, 0.05);
+      --primary-red: #e60000;
+      --primary-red-hover: #ff1a1a;
+      --accent-glow: rgba(208, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] {
+      --bg-gradient: radial-gradient(circle at center, #f5f5f7 0%, #e5e5ea 100%);
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --text-color: #1c1c1e;
+      --text-sub: #666668;
+      --border-color: rgba(0, 0, 0, 0.1);
+      --input-bg: rgba(255, 255, 255, 0.9);
+      --chat-bg: rgba(250, 250, 250, 0.9);
+      --chat-msg-bg: rgba(0, 0, 0, 0.04);
+      --primary-red: #d70000;
+      --primary-red-hover: #ff2a2a;
+      --accent-glow: rgba(215, 0, 0, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Kanit', sans-serif;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+    }
+
+    .event-box {
+      width: min(780px, 100%);
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) 1fr;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.3), 0 0 40px var(--accent-glow);
+      overflow: hidden;
+    }
+
+    .poster {
+      width: 100%;
+      height: 100%;
+      min-height: 380px;
+      object-fit: cover;
+      background: #111;
+    }
+
+    .event-info {
+      padding: 40px 35px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .logo {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -1px;
+      margin-bottom: 25px;
+    }
+
+    .logo span {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      margin-top: 8px;
+      color: var(--primary-red);
+    }
+
+    .event-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .show-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 0;
+      gap: 15px;
+    }
+
+    .join {
+      border: none;
+      background: var(--primary-red);
+      color: white;
+      padding: 8px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .join:hover {
+      background: var(--primary-red-hover);
+      transform: translateY(-2px);
+    }
+
+    #loginPage, #watchPage { display: none; }
+
+    .login-card {
+      width: min(420px, 92%);
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 40px 30px;
+      text-align: center;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    }
+
+    .lock {
+      font-size: 36px;
+      margin-bottom: 10px;
+      display: inline-block;
+      background: var(--chat-msg-bg);
+      padding: 12px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+    }
+
+    input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-color);
+      text-align: center;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 12px;
+      outline: none;
+      padding: 0 15px;
+      margin-bottom: 12px;
+    }
+
+    input:focus { border-color: var(--primary-red); }
+
+    .enter {
+      width: 100%;
+      height: 50px;
+      border: none;
+      background: var(--primary-red);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .enter:hover { background: var(--primary-red-hover); transform: translateY(-2px); }
+
+    .error { display: none; color: #ff4d4d; font-size: 13px; margin-top: 12px; }
+    .back { margin-top: 18px; color: var(--text-sub); font-size: 13px; cursor: pointer; }
+
+    .watch-container {
+      width: min(1200px, 96%);
+      margin: 0 auto;
+    }
+
+    .watch-header {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .watch-title { font-size: 20px; font-weight: 600; }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 0, 0, 0.15);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      color: #ff4d4d;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff2020;
+      box-shadow: 0 0 8px #ff2020;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: black;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    }
+
+    .video-overlay-full {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 10;
+      background: transparent;
+    }
+
+    .loading-cover {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #000;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.6s ease;
+    }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-left-color: var(--primary-red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    iframe { width: 100%; height: 100%; border: none; }
+
+    .custom-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group { display: flex; gap: 8px; }
+
+    .control-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+    }
+
+    .control-btn:hover {
+      background: var(--primary-red);
+      color: white;
+      border-color: var(--primary-red);
+    }
+
+    .chat-box {
+      background: var(--chat-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      height: 100%;
+      min-height: 480px;
+      max-height: 550px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+    }
+
+    .chat-header {
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-msg {
+      background: var(--chat-msg-bg);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    .chat-user { font-weight: 600; color: var(--primary-red); margin-bottom: 2px; }
+    .chat-time { font-size: 10px; color: var(--text-sub); float: right; }
+
+    .chat-input-area {
+      padding: 12px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input-area input {
+      margin-bottom: 0;
+      text-align: left;
+      height: 40px;
+      font-size: 13px;
+    }
+
+    .chat-send {
+      background: var(--primary-red);
+      color: white;
+      border: none;
+      padding: 0 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    @media(max-width: 850px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .chat-box { min-height: 380px; height: 380px; }
+      .event-box { grid-template-columns: 1fr; }
+      .poster { min-height: auto; aspect-ratio: 16/9; }
+    }
+  </style>
+</head>
+
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" title="สลับธีม">🌙</button>
+
+<!-- HOME -->
+<div id="homePage" class="page">
+  <div class="event-box">
+    <img id="poster" class="poster" src="">
+    <div class="event-info">
+      <div class="logo">
+        TDL LIVE 
+        <span>LIVE STREAMING</span>
+      </div>
+      <div id="eventTitle" class="event-title">EVENT</div>
+      <div id="shows"></div>
+      <div style="margin-top: 20px; font-size: 11px; color: var(--text-sub); text-align: center;">
+        © 2026 PRIVATE LIVE PLATFORM
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginPage" class="page">
+  <div class="login-card">
+    <div class="lock">🔒</div>
+    <div id="loginTitle" class="login-title">TDL LIVE I แพลตฟอร์มสตรีมมิ่งไลฟ์สดสำหรับงานอีเว้นต์ Roblox</div>
+    <div style="font-size: 13px; color: var(--text-sub); margin: 6px 0 20px 0;">กรอกชื่อเล่นและ Access Code เพื่อเข้าชม</div>
+    
+    <input id="nickname" type="text" placeholder="ชื่อเล่นของคุณ (Nickname)" maxlength="20" autocomplete="off">
+    <input id="code" type="text" placeholder="TDLLIVE-XXXX-XXXX-XXXX" autocomplete="off">
+    
+    <button id="enterButton" class="enter" onclick="verify()">ENTER LIVE STREAM</button>
+    <div id="error" class="error">Access Code ไม่ถูกต้อง</div>
+    <div class="back" onclick="goHome()">← BACK TO HOME</div>
+  </div>
+</div>
+
+<!-- WATCH & CHAT -->
+<div id="watchPage" class="page">
+  <div class="watch-container">
+    <div class="watch-header">
+      <div id="watchTitle" class="watch-title">LIVE STREAMING</div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div class="live-badge">
+          <span class="live-dot"></span> LIVE
+        </div>
+        <button class="control-btn" onclick="logout()" style="padding: 4px 10px; font-size: 11px;">🚪 ออกจากระบบ</button>
+      </div>
+    </div>
+    
+    <div class="main-grid">
+      <div>
+        <div id="playerContainer" class="player-wrapper">
+          <div id="loadingCover" class="loading-cover">
+            <div class="spinner"></div>
+            <div style="color: #888; font-size: 13px; letter-spacing: 1px;">CONNECTING TO STREAM...</div>
+          </div>
+          <div class="video-overlay-full" oncontextmenu="return false;"></div>
+          <iframe id="player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        </div>
+
+        <div class="custom-controls">
+          <div class="control-group">
+            <button id="muteBtn" class="control-btn" onclick="toggleMute()">🔊</button>
+            <button class="control-btn" onclick="changeVolume(-10)">➖</button>
+            <button class="control-btn" onclick="changeVolume(10)">➕</button>
+          </div>
+          <button class="control-btn" onclick="goFullscreen()">⛶</button>
+        </div>
+      </div>
+
+      <div class="chat-box">
+        <div class="chat-header">
+          💬 LIVE CHAT
+          <span id="chatUserDisplay" style="font-size: 11px; color: var(--text-sub);"></span>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+          <div style="text-align: center; color: var(--text-sub); font-size: 12px;">กำลังโหลดข้อความ...</div>
+        </div>
+        <div class="chat-input-area">
+          <input id="chatInput" type="text" placeholder="พิมพ์ข้อความ..." maxlength="150" onkeydown="if(event.key==='Enter') sendChat()">
+          <button class="chat-send" onclick="sendChat()">ส่ง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let shows = [];
+let selectedShow = null;
+let ytPlayer = null;
+let currentVolume = 100;
+let chatInterval = null;
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+}
+
+initTheme();
+
+window.onload = function() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      shows = data || [];
+      renderShows();
+      checkSavedSession();
+    })
+    .getShows();
+};
+
+function checkSavedSession() {
+  const savedCode = localStorage.getItem('savedCode');
+  const savedShowId = localStorage.getItem('savedShowId');
+  const savedNick = localStorage.getItem('savedNick') || 'Viewer';
+
+  if (savedCode && savedShowId) {
+    selectedShow = shows.find(s => s.id === savedShowId);
+    if (selectedShow) {
+      document.getElementById('nickname').value = savedNick;
+      document.getElementById('code').value = savedCode;
+      verify(true);
+    }
+  }
+}
+
+function renderShows() {
+  const container = document.getElementById('shows');
+  container.innerHTML = '';
+  if (!shows.length) {
+    container.innerHTML = '<div style="color:var(--text-sub); text-align:center;">ไม่มีรอบการแสดง</div>';
+    return;
+  }
+
+  const fallbackImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="100%" height="100%" fill="%23111111"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23777777" font-family="sans-serif" font-size="30">NO POSTER</text></svg>';
+
+  const imgEl = document.getElementById('poster');
+  imgEl.src = shows[0].poster || fallbackImage;
+  imgEl.onerror = function() {
+    this.onerror = null;
+    this.src = fallbackImage;
+  };
+
+  document.getElementById('eventTitle').textContent = shows[0].name;
+
+  shows.forEach(show => {
+    const row = document.createElement('div');
+    row.className = 'show-row';
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(show.date)}</strong><br>
+        <span style="color:var(--text-sub); font-size:13px;">${escapeHtml(show.time)}</span>
+      </div>
+      <button class="join" onclick="selectShow('${show.id}')">JOIN</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function selectShow(id) {
+  selectedShow = shows.find(s => s.id === id);
+  if (!selectedShow) return;
+
+  document.getElementById('homePage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('loginTitle').textContent = selectedShow.name;
+  document.getElementById('error').style.display = 'none';
+}
+
+function verify(isAuto = false) {
+  if (!selectedShow) return;
+
+  const nick = document.getElementById('nickname').value.trim() || 'Viewer';
+  const code = document.getElementById('code').value.trim().toUpperCase();
+  const btn = document.getElementById('enterButton');
+  const error = document.getElementById('error');
+
+  if (!code) {
+    error.textContent = 'กรุณากรอก Access Code';
+    error.style.display = 'block';
+    return;
+  }
+
+  if (!isAuto) {
+    btn.disabled = true;
+    btn.textContent = 'CHECKING...';
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.success) {
+        localStorage.setItem('savedCode', code);
+        localStorage.setItem('savedShowId', selectedShow.id);
+        localStorage.setItem('savedNick', nick);
+        openLive(nick);
+      } else {
+        error.textContent = res.message;
+        error.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'ENTER LIVE STREAM';
+        logout();
+      }
+    })
+    .verifyCode(selectedShow.id, code);
+}
+
+function logout() {
+  localStorage.removeItem('savedCode');
+  localStorage.removeItem('savedShowId');
+  if (chatInterval) clearInterval(chatInterval);
+  location.reload();
+}
+
+function openLive(nickname) {
+  document.getElementById('homePage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('watchPage').style.display = 'flex';
+  document.getElementById('watchTitle').textContent = selectedShow.name;
+  document.getElementById('chatUserDisplay').textContent = '👤 ' + nickname;
+
+  const loadingCover = document.getElementById('loadingCover');
+  loadingCover.style.display = 'flex';
+  loadingCover.style.opacity = '1';
+
+  const iframe = document.getElementById('player');
+  iframe.src = 'https://www.youtube.com/embed/' +
+    encodeURIComponent(selectedShow.youtube) +
+    '?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1';
+
+  ytPlayer = new YT.Player('player');
+
+  setTimeout(() => {
+    loadingCover.style.opacity = '0';
+    setTimeout(() => loadingCover.style.display = 'none', 600);
+  }, 3500);
+
+  loadChat();
+  chatInterval = setInterval(loadChat, 3000);
+}
+
+function toggleMute() {
+  if (!ytPlayer) return;
+  const btn = document.getElementById('muteBtn');
+  if (ytPlayer.isMuted()) {
+    ytPlayer.unMute();
+    btn.textContent = '🔇 ปิดเสียง';
+  } else {
+    ytPlayer.mute();
+    btn.textContent = '🔊 เปิดเสียง';
+  }
+}
+
+function changeVolume(delta) {
+  if (!ytPlayer) return;
+  if (ytPlayer.isMuted()) ytPlayer.unMute();
+  currentVolume = Math.min(100, Math.max(0, currentVolume + delta));
+  ytPlayer.setVolume(currentVolume);
+  
+  const btn = document.getElementById('muteBtn');
+  btn.textContent = currentVolume === 0 ? '🔇 ปิดเสียง' : '🔊 เสียง ' + currentVolume + '%';
+}
+
+function goFullscreen() {
+  const el = document.getElementById('playerContainer');
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.msRequestFullscreen) el.msRequestFullscreen();
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  const nick = localStorage.getItem('savedNick') || 'Viewer';
+
+  if (!msg || !selectedShow) return;
+  input.value = '';
+
+  google.script.run
+    .withSuccessHandler(function() {
+      loadChat();
+    })
+    .sendChatMessage(selectedShow.id, nick, msg);
+}
+
+function loadChat() {
+  if (!selectedShow) return;
+  google.script.run
+    .withSuccessHandler(function(messages) {
+      const box = document.getElementById('chatMessages');
+      if (!messages.length) {
+        box.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:12px;">ยังไม่มีข้อความ พิมพ์คุยคนแรกเลย!</div>';
+        return;
+      }
+      box.innerHTML = messages.map(m => `
+        <div class="chat-msg">
+          <span class="chat-time">${m.time}</span>
+          <div class="chat-user">${escapeHtml(m.user)}</div>
+          <div>${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+      box.scrollTop = box.scrollHeight;
+    })
+    .getChatMessages(selectedShow.id);
+}
+
+function goHome() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('watchPage').style.display = 'none';
+  document.getElementById('homePage').style.display = 'flex';
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+</script>
+
+</body>
+</html>
