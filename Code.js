@@ -1,79 +1,73 @@
+const { google } = require('googleapis');
+const path = require('path');
+
+// ==========================================
+// CONFIGURATION
+// ==========================================
 const CONFIG = {
-  SPREADSHEET_ID: '18_W6uls5wfc9BxLY46zEVPEEJiHW7fzZn2AI__TZux4', // ก๊อปปี้ ID จาก URL Google Sheets มาวางตรงนี้
+  SPREADSHEET_ID: 'วาง_SPREADSHEET_ID_ตรงนี้', // ใส่ Google Sheet ID ของคุณ
+  KEY_FILE_PATH: path.join(__dirname, 'credentials.json'), // ไฟล์ Service Account
   MAIN_CODES_PER_SHOW: 50,
-  PREFIX: 'TDLLIVE'
+  PREFIX: 'TDLLIVE',
+  TIMEZONE: 'Asia/Bangkok'
 };
 
-function getSS() {
-  if (CONFIG.SPREADSHEET_ID) {
-    return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  }
-  return SpreadsheetApp.getActiveSpreadsheet();
+// ==========================================
+// AUTHENTICATION & GOOGLE SHEETS CLIENT
+// ==========================================
+const auth = new google.auth.GoogleAuth({
+  keyFile: CONFIG.KEY_FILE_PATH,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+
+const sheets = google.sheets({ version: 'v4', auth });
+
+/**
+ * ดึงข้อมูลตาม Range จาก Google Sheets
+ */
+async function getSheetValues(range) {
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    range: range,
+  });
+  return response.data.values || [];
 }
 
-/* ==============================
-   SETUP & MENU
-================================ */
-function setup() {
-  const ss = getSS();
+/**
+ * เพิ่มแถวใหม่ลง Google Sheets
+ */
+async function appendSheetValues(range, values) {
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: CONFIG.SPREADSHEET_ID,
+    range: range,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values },
+  });
+}
 
-  let shows = ss.getSheetByName('SHOWS');
-  let codes = ss.getSheetByName('CODES');
-  let chat = ss.getSheetByName('CHAT');
-
-  if (!shows) shows = ss.insertSheet('SHOWS');
-  if (!codes) codes = ss.insertSheet('CODES');
-  if (!chat) chat = ss.insertSheet('CHAT');
-
-  shows.clear();
-  codes.clear();
-  chat.clear();
-
-  shows.getRange(1, 1, 1, 7).setValues([[
-    'SHOW_ID', 'DATE', 'TIME', 'SHOW_NAME', 'POSTER_URL', 'YOUTUBE_ID', 'ACTIVE'
-  ]]);
-
-  codes.getRange(1, 1, 1, 5).setValues([[
-    'CODE', 'SHOW_ID', 'STATUS', 'CREATED_AT', 'MAX_USES'
-  ]]);
-
-  chat.getRange(1, 1, 1, 5).setValues([[
-    'SHOW_ID', 'NICKNAME', 'MESSAGE', 'TIMESTAMP', 'ID'
-  ]]);
-
-  shows.setFrozenRows(1);
-  codes.setFrozenRows(1);
-  chat.setFrozenRows(1);
-
+// ==========================================
+// SETUP SYSTEM / INITIALIZE SHEETS
+// ==========================================
+async function setup() {
   try {
-    SpreadsheetApp.getUi().alert('สร้างระบบเรียบร้อยแล้ว (SHOWS, CODES, CHAT)');
-  } catch (e) {
-    Logger.log('Setup completed successfully via Web App context');
+    // ล้างข้อมูลและตั้ง Header
+    await sheets.spreadsheets.values.clear({ spreadsheetId: CONFIG.SPREADSHEET_ID, range: 'SHOWS!A1:Z' });
+    await sheets.spreadsheets.values.clear({ spreadsheetId: CONFIG.SPREADSHEET_ID, range: 'CODES!A1:Z' });
+    await sheets.spreadsheets.values.clear({ spreadsheetId: CONFIG.SPREADSHEET_ID, range: 'CHAT!A1:Z' });
+
+    await appendSheetValues('SHOWS!A1', [['SHOW_ID', 'DATE', 'TIME', 'SHOW_NAME', 'POSTER_URL', 'YOUTUBE_ID', 'ACTIVE']]);
+    await appendSheetValues('CODES!A1', [['CODE', 'SHOW_ID', 'STATUS', 'CREATED_AT', 'MAX_USES']]);
+    await appendSheetValues('CHAT!A1', [['SHOW_ID', 'NICKNAME', 'MESSAGE', 'TIMESTAMP', 'ID']]);
+
+    console.log('✅ สร้างระบบเรียบร้อยแล้ว (SHOWS, CODES, CHAT)');
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการ Setup:', error.message);
   }
 }
 
-function onOpen() {
-  try {
-    SpreadsheetApp.getUi()
-      .createMenu('🎥 PRIVATE LIVE')
-      .addItem('⚙️ สร้างระบบ / รีเซ็ต Sheet', 'setup')
-      .addItem('🔑 สร้าง Codes (12 หลัก) ให้ทุกรอบ', 'generateCodesForAllShows')
-      .addToUi();
-  } catch (e) {
-    Logger.log('Menu cannot be created in this context');
-  }
-}
-
-function doGet() {
-  return HtmlService
-    .createHtmlOutputFromFile('Index')
-    .setTitle('TDL LIVE I แพลตฟอร์มสตรีมมิ่งไลฟ์สดสำหรับงานอีเว้นต์ Roblox')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/* ==============================
-   SHOWS & YOUTUBE
-================================ */
+// ==========================================
+// SHOWS & YOUTUBE
+// ==========================================
 function extractYoutubeId(urlOrId) {
   if (!urlOrId) return '';
   const str = String(urlOrId).trim();
@@ -81,75 +75,53 @@ function extractYoutubeId(urlOrId) {
   return match ? match[1] : (str.length === 11 ? str : str);
 }
 
-function getShows() {
-  const sheet = getSS().getSheetByName('SHOWS');
-  if (!sheet || sheet.getLastRow() < 2) return [];
-
-  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
-  return values
-    .filter(r => r[0] && String(r[6]).toUpperCase() !== 'NO')
-    .map(r => ({
-      id: String(r[0]),
-      date: formatDate(r[1]),
-      time: formatTime(r[2]),
-      name: String(r[3] || ''),
-      poster: String(r[4] || ''),
-      youtube: extractYoutubeId(r[5]),
-      active: String(r[6] || 'YES')
-    }));
-}
-
 function formatDate(val) {
   if (!val) return '';
-  if (Object.prototype.toString.call(val) === '[object Date]') {
-    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd/MM/yyyy');
-  }
-  return String(val);
+  const date = new Date(val);
+  if (isNaN(date.getTime())) return String(val);
+  
+  return new Intl.DateTimeFormat('th-TH', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    timeZone: CONFIG.TIMEZONE
+  }).format(date);
 }
 
 function formatTime(val) {
   if (!val) return '';
-  if (Object.prototype.toString.call(val) === '[object Date]') {
-    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'HH:mm');
-  }
-  return String(val);
+  const date = new Date(val);
+  if (isNaN(date.getTime())) return String(val);
+
+  return new Intl.DateTimeFormat('th-TH', {
+    hour: '2-digit', minute: '2-digit', hour12: false,
+    timeZone: CONFIG.TIMEZONE
+  }).format(date);
 }
 
-/* ==============================
-   CODE GENERATOR
-================================ */
-function generateCodesForAllShows() {
-  const shows = getShows();
-  if (!shows.length) {
-    try {
-      SpreadsheetApp.getUi().alert('ยังไม่มีรอบการแสดงใน SHOWS');
-    } catch (e) {
-      Logger.log('No shows found');
-    }
-    return;
-  }
-
-  shows.forEach(show => generateCodes(show.id));
-
+async function getShows() {
   try {
-    SpreadsheetApp.getUi().alert('สร้าง Codes รูปแบบใหม่สำเร็จ!');
-  } catch (e) {
-    Logger.log('Codes generated successfully via Web App context');
+    const values = await getSheetValues('SHOWS!A2:G');
+    if (!values.length) return [];
+
+    return values
+      .filter(r => r[0] && String(r[6] || '').toUpperCase() !== 'NO')
+      .map(r => ({
+        id: String(r[0]),
+        date: formatDate(r[1]),
+        time: formatTime(r[2]),
+        name: String(r[3] || ''),
+        poster: String(r[4] || ''),
+        youtube: extractYoutubeId(r[5]),
+        active: String(r[6] || 'YES')
+      }));
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการดึงข้อมูล SHOWS:', error.message);
+    return [];
   }
 }
 
-function generateCodes(showId) {
-  const sheet = getSS().getSheetByName('CODES');
-  const now = new Date();
-  const rows = [];
-
-  for (let i = 0; i < CONFIG.MAIN_CODES_PER_SHOW; i++) {
-    rows.push([createLongCode(), showId, 'ACTIVE', now, 'UNLIMITED']);
-  }
-
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
-}
-
+// ==========================================
+// CODE GENERATOR
+// ==========================================
 function createLongCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let rand = '';
@@ -159,64 +131,117 @@ function createLongCode() {
   return CONFIG.PREFIX + '-' + rand.substring(0, 4) + '-' + rand.substring(4, 8) + '-' + rand.substring(8, 12);
 }
 
-/* ==============================
-   VERIFY CODE
-================================ */
-function verifyCode(showId, code) {
+async function generateCodes(showId) {
+  const now = new Date().toISOString();
+  const rows = [];
+
+  for (let i = 0; i < CONFIG.MAIN_CODES_PER_SHOW; i++) {
+    rows.push([createLongCode(), showId, 'ACTIVE', now, 'UNLIMITED']);
+  }
+
+  await appendSheetValues('CODES!A:E', rows);
+}
+
+async function generateCodesForAllShows() {
+  try {
+    const shows = await getShows();
+    if (!shows.length) {
+      console.log('⚠️ ไม่พบข้อมูลรอบการแสดงใน SHOWS');
+      return;
+    }
+
+    for (const show of shows) {
+      await generateCodes(show.id);
+    }
+
+    console.log('✅ สร้าง Codes รูปแบบใหม่สำเร็จ!');
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการสร้าง Codes:', error.message);
+  }
+}
+
+// ==========================================
+// VERIFY CODE
+// ==========================================
+async function verifyCode(showId, code) {
   code = String(code || '').trim().toUpperCase();
   if (!showId || !code) return { success: false, message: 'กรุณากรอกรหัสเข้าชม' };
 
-  const sheet = getSS().getSheetByName('CODES');
-  if (!sheet || sheet.getLastRow() < 2) return { success: false, message: 'ไม่พบข้อมูลรหัส' };
+  try {
+    const data = await getSheetValues('CODES!A2:C');
+    if (!data.length) return { success: false, message: 'ไม่พบข้อมูลรหัส' };
 
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    for (let i = 0; i < data.length; i++) {
+      const savedCode = String(data[i][0] || '').trim().toUpperCase();
+      const savedShow = String(data[i][1] || '').trim();
+      const status = String(data[i][2] || '').trim().toUpperCase();
 
-  for (let i = 0; i < data.length; i++) {
-    const savedCode = String(data[i][0]).trim().toUpperCase();
-    const savedShow = String(data[i][1]).trim();
-    const status = String(data[i][2]).trim().toUpperCase();
-
-    if (savedCode === code && savedShow === String(showId)) {
-      if (status !== 'ACTIVE') {
-        return { success: false, message: 'รหัสนี้ถูกยกเลิกการใช้งานแล้ว' };
+      if (savedCode === code && savedShow === String(showId)) {
+        if (status !== 'ACTIVE') {
+          return { success: false, message: 'รหัสนี้ถูกยกเลิกการใช้งานแล้ว' };
+        }
+        return { success: true };
       }
-      return { success: true };
     }
+
+    return { success: false, message: 'Access Code ไม่ถูกต้อง' };
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการตรวจสอบ Code:', error.message);
+    return { success: false, message: 'เกิดข้อผิดพลาดจากระบบ' };
   }
-
-  return { success: false, message: 'Access Code ไม่ถูกต้อง' };
 }
 
-/* ==============================
-   REAL-TIME CHAT
-================================ */
-function sendChatMessage(showId, nickname, message) {
+// ==========================================
+// REAL-TIME CHAT
+// ==========================================
+async function sendChatMessage(showId, nickname, message) {
   if (!showId || !message.trim()) return { success: false };
-  const sheet = getSS().getSheetByName('CHAT');
-  const now = new Date();
-  const id = 'MSG-' + now.getTime();
-  
-  sheet.appendRow([
-    String(showId),
-    String(nickname || 'Anonymous').substring(0, 20),
-    String(message).substring(0, 200),
-    now,
-    id
-  ]);
-  return { success: true };
+  try {
+    const now = new Date();
+    const id = 'MSG-' + now.getTime();
+
+    await appendSheetValues('CHAT!A:E', [[
+      String(showId),
+      String(nickname || 'Anonymous').substring(0, 20),
+      String(message).substring(0, 200),
+      now.toISOString(),
+      id
+    ]]);
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการส่งข้อความ:', error.message);
+    return { success: false };
+  }
 }
 
-function getChatMessages(showId) {
-  const sheet = getSS().getSheetByName('CHAT');
-  if (!sheet || sheet.getLastRow() < 2) return [];
+async function getChatMessages(showId) {
+  try {
+    const values = await getSheetValues('CHAT!A2:D');
+    if (!values.length) return [];
 
-  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-  return values
-    .filter(r => String(r[0]) === String(showId))
-    .slice(-50)
-    .map(r => ({
-      user: String(r[1]),
-      text: String(r[2]),
-      time: Utilities.formatDate(new Date(r[3]), Session.getScriptTimeZone(), 'HH:mm')
-    }));
+    return values
+      .filter(r => String(r[0]) === String(showId))
+      .slice(-50)
+      .map(r => ({
+        user: String(r[1]),
+        text: String(r[2]),
+        time: formatTime(r[3])
+      }));
+  } catch (error) {
+    console.error('❌ เกิดข้อผิดพลาดในการดึงข้อความแชท:', error.message);
+    return [];
+  }
 }
+
+// ==========================================
+// EXPORTS FOR SERVER (Express / Node.js)
+// ==========================================
+module.exports = {
+  setup,
+  getShows,
+  generateCodesForAllShows,
+  verifyCode,
+  sendChatMessage,
+  getChatMessages
+};
