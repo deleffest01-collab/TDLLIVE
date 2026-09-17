@@ -5,7 +5,7 @@ const path = require('path');
 // CONFIGURATION
 // ==========================================
 const CONFIG = {
-  SPREADSHEET_ID: 'วาง_SPREADSHEET_ID_ตรงนี้', // ใส่ Google Sheet ID ของคุณ
+  SPREADSHEET_ID: '18_W6uls5wfc9BxLY46zEVPEEJiHW7fzZn2AI__TZux4', // ใส่ Google Sheet ID ของคุณ
   KEY_FILE_PATH: path.join(__dirname, 'credentials.json'), // ไฟล์ Service Account
   MAIN_CODES_PER_SHOW: 50,
   PREFIX: 'TDLLIVE',
